@@ -1,1 +1,2 @@
-1;10020030099;Ana Maria;am@email.com;12345
+1;mila;100;mila@email.com;123;0
+2;bob;900;bob@email.com;000;0
