@@ -27,7 +27,13 @@ class ZooBurguerClube:
             '7': {'nome': 'Milk-Shake', 'preco': 12.0},
             '8': {'nome': 'Refrigerante', 'preco': 10.0}
         }
+        self.pagamentos = {
+            '1': {'tipo': 'Cartão'},
+            '2': {'tipo': 'Pix'},
+            '3': {'tipo': 'Dinheiro'}
+        }
 
+    #MANIPULAÇÕES DE ARQUIVO
     def ler_clientes(self):
         with open('clientes.txt', 'r') as db_clientes:
             return [cliente.strip().split(";") for cliente in db_clientes]
@@ -38,12 +44,14 @@ class ZooBurguerClube:
 
     def persistencia_clientes(self, dados):
         with open('clientes.txt', 'w') as db_clientes:
-            db_clientes.writelines(";".join(cliente) + "\n" for cliente in dados)
+          for cliente in dados:
+            db_clientes.write(";".join(cliente) + "\n")
 
     def pode_cadastrar(self, cpf):
         clientes_cadastrados = self.ler_clientes()
         return any(cliente[2] == cpf for cliente in clientes_cadastrados)
     
+    #ÚTEIS
     def verificar_preenchimento(self, dado):
         if dado.isspace() or dado == "":
             print("Preencha com uma informação válida")
@@ -57,7 +65,9 @@ class ZooBurguerClube:
         dado_tudo_minusculo = dado_sem_ponto_ou_virgula.casefold()
         return dado_tudo_minusculo
 
+    #CREATE
     def cadastrar_cliente(self):
+
         cpf = str(input('Digite seu CPF, apenas números e sem espaços: '))
         while self.verificar_preenchimento(cpf):
             cpf = str(input('Digite seu CPF, apenas números e sem espaços: '))
@@ -70,7 +80,6 @@ class ZooBurguerClube:
             for verificacao in autentica:
                 if verificacao[2] == cpf and verificacao[4] == senha:
                     print("Login realizado com sucesso!")
-                    return verificacao[0]
         else:
             nome = str(input('Como prefere ser chamado? '))
             while self.verificar_preenchimento(nome):
@@ -91,10 +100,9 @@ class ZooBurguerClube:
             dados = [id_cliente, nome, cpf, email, senha, pontos]
 
             self.inserir_cliente(dados)
-            self.contador_clientes += 1
             print("Cadastrado com Sucesso!")
         
-
+    #READ
     def cliente_por_id(self):
         id_atual = str(input('Digite o ID do cliente que deseja analisar: '))
         clientes_cadastrados = self.ler_clientes()
@@ -109,7 +117,7 @@ class ZooBurguerClube:
         if not encontrado:
             print(f"Cliente com ID {id_atual} não encontrado.")
         
-
+    #UPDATE
     def atualizar_cliente(self):
         id_atual = str(input('Digite o ID que deseja atualizar: '))
         clientes_cadastrados = self.ler_clientes()
@@ -130,10 +138,12 @@ class ZooBurguerClube:
                 senha = str(input('Digite uma senha: '))
                 while self.verificar_preenchimento(senha):
                     senha = str(input('Digite uma senha: '))
-
-                dados = [cliente[0], nome, cliente[2], email, senha]
+                
+                pontos = cliente[5]
+                dados = [cliente[0], nome, cliente[2], email, senha, pontos]
                 clientes_cadastrados[i] = dados
                 self.persistencia_clientes(clientes_cadastrados)
+                
                 encontrado = True
                 print("Dados Atualizados com sucesso!")
                 break
@@ -141,7 +151,7 @@ class ZooBurguerClube:
         if not encontrado:
             print(f"Cliente com ID {id_atual} não encontrado.")
    
-
+    #DELETE
     def remover_cliente(self):
         id_cliente = str(input('Digite o ID que deseja remover o cadastro: '))
         clientes_cadastrados = self.ler_clientes()
@@ -158,6 +168,7 @@ class ZooBurguerClube:
         if not removido:
             print(f"Cliente com ID {id_cliente} não encontrado.")
 
+    #LOGIN
     def realizar_login(self):
         cpf = str(input('Digite seu CPF: '))
         senha = str(input('Digite sua senha: '))
@@ -165,44 +176,71 @@ class ZooBurguerClube:
         autentica = self.ler_clientes()
         for verificacao in autentica:
             if verificacao[2] == cpf and verificacao[4] == senha:
-                print("Login realizado com sucesso!")
-                return {'id': verificacao[0], 'Pontos Acumulados': verificacao[5]}
+                print(f"Login realizado com sucesso!\n Olá {verificacao[1].title()}, você possui um saldo de {verificacao[5]} pontos")
+                return verificacao
 
         print("Falha no login. Verifique suas credenciais.")
         return None
-
+    
+    #PONTOS
     def exibir_recompensas(self):
         for item, recompensa_pontos in self.recompensas.items():
             print(f"{item}: {recompensa_pontos['recompensa']} - Pontos Necessário: {recompensa_pontos['pontos']:.2f}")
 
-    def calcular_pontos_suficientes(self, pontos_necessarios):
-        cpf = str(input('Digite seu CPF: '))
-        senha = str(input('Digite sua senha: '))
-
-        autentica = self.ler_clientes()
-        for verificacao in autentica:
-            if verificacao[2] == cpf and verificacao[4] == senha:
-                print("Autenticado com sucesso!")
-                resultado = float(verificacao[5]) - float(pontos_necessarios)
-                if resultado >= 0:
-                    return True
-                else:
-                    print("Falha na autenticação OU Você não possui pontos suficientes")
-                    return False
+    def calcular_debito_de_pontos(self, saldo_de_pontos, pontos_necessarios):
+        resultado = float(saldo_de_pontos) - float(pontos_necessarios)
+        if resultado >= 0:
+            print(f"\nApós finalizar o pedido, o seu saldo será de {resultado} pontos")
+            return resultado
+        else:
+            print("Você não possui pontos suficientes")
+            return False
+    
+    def calcular_credito_de_pontos(self, saldo_de_pontos, total_pedido):
+        resultado = float(saldo_de_pontos) + float(total_pedido)
+        if resultado >= 0:
+            print(f"\nApós finalizar o pedido, o seu saldo será de {resultado} pontos")
+            return resultado
+        else:
+            print("Você não possui pontos suficientes")
+            return False
 
     def resgatar_recompensas(self):
+        resgates:{}
         while True:
             escolha = str(input("Digite o número do item desejado (ou 'S' para sair): "))
             if escolha.upper() == 'S':
                 break
             if escolha in self.recompensas:
+                resgates[self.recompensas[escolha]['recompensa']] = { 'pontos': self.recompensas[escolha]['pontos']}
+                #verifica pontos necessários uma função
                 pontos_necessarios =[self.recompensas[escolha]['pontos']]
-                self.calcular_pontos_suficientes(pontos_necessarios) 
+                pontos_suficientes = self.calcular_pontos_suficientes(pontos_necessarios) 
+                if pontos_suficientes:
+                    print(pontos_suficientes)
+                    #ainda precisa atualizar no arquivo de texto
+
             else:
                 print("Opção inválida. Tente novamente.")
+    
+    def atualizar_pontos(self, id_atual, novo_saldo):
+        clientes_cadastrados = self.ler_clientes()
+        atualizado = False
+        for i, cliente in enumerate(clientes_cadastrados):
+            if cliente[0] == id_atual:
+              pontos = str(novo_saldo)
+              dados = [cliente[0], cliente[1], cliente[2], cliente[3], cliente[4], pontos]
+              clientes_cadastrados[i] = dados
+              self.persistencia_clientes(clientes_cadastrados)
+              atualizado = True
+              print("O seu saldo já foi atualizado!")
+              break
 
-            print("teste")
+        if not atualizado:
+            print(f"Cliente com ID {id_atual} não encontrado. Tente logar novamente e recomerçar")
 
+
+    #PEDIDOS
     def exibir_cardapio(self):
         for item, nome_preco in self.cardapio.items():
             print(f"{item}: {nome_preco['nome']} - R${nome_preco['preco']:.2f}")
@@ -229,20 +267,50 @@ class ZooBurguerClube:
             total += qtd_preco['quantidade'] * qtd_preco['preco']
         return total
 
+
+    #PAGAMENTOS
+    def exibir_metodos_pagamento(self):
+        for item, valor in self.pagamentos.items():
+            print(f"{item} - {valor['tipo']}")
+        opcao = int(input('Escolha uma opção: '))
+
+        if opcao == 1:
+          print('Esperando Aprovação do Pagamento em Cartão')
+        elif opcao == 2:
+          print('Esperando Operação Pix')
+        elif opcao == 3:
+          pagamento = int(input('Precisa de troco para quanto? '))
+          print('Agora é só aguardar, pagamento será realizado na entrega!')
+        else:
+          print('Opção inválida!')
+
+
+    #MAIN
+  
     def main(self):
-        self.cadastrar_cliente()
-        clientes = self.ler_clientes()
-        for cliente in clientes:
-            print(cliente)
+        dados_cliente = self.realizar_login()
+        # self.cadastrar_cliente()
+        
         print("Realize seu pedido:")
+
         pedido = self.fazer_pedido()
         total = self.calcular_total(pedido)
-
+        pontos_gerados = self.calcular_credito_de_pontos(dados_cliente[5],total)
+        #pontos_resgatados = self.calcular_debito_de_pontos(saldo_de_pontos, pontos_necessarios)
+        
         print("\nResumo do Pedido:")
         for item, qtd_preco in pedido.items():
             print(f"{qtd_preco['quantidade']}x {item} - R${qtd_preco['preco']:.2f} cada")
 
         print(f"\nTotal do Pedido: R${total:.2f}")
+        self.exibir_metodos_pagamento()
+        pagamento_aprovado = str(input('aguardando confirmação'))
+  
+        if pagamento_aprovado:
+          self.atualizar_pontos(dados_cliente[0],pontos_gerados)
+        else:
+          print('Error, tente novamente')
+
 
 sistema_restaurante = ZooBurguerClube()
 sistema_restaurante.main()
