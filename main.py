@@ -35,22 +35,31 @@ class ZooBurguerClube:
 
     #MANIPULAÇÕES DE ARQUIVO
     def ler_clientes(self):
+      try:
         with open('clientes.txt', 'r') as db_clientes:
             return [cliente.strip().split(";") for cliente in db_clientes]
+      except (FileNotFoundError, IOError) as e:
+        print("Problema no banco de dados, Dados não foram encontrados")
 
     def inserir_cliente(self, dados):
+      try:
         with open('clientes.txt', 'a') as db_clientes:
             db_clientes.write(";".join(dados) + "\n")
+      except (IOError, PermissionError) as e:
+          print(f"Erro ao inserir cliente: {e}")
 
     def persistencia_clientes(self, dados):
-        with open('clientes.txt', 'w') as db_clientes:
-          for cliente in dados:
-            db_clientes.write(";".join(cliente) + "\n")
+        try:
+          with open('clientes.txt', 'w') as db_clientes:
+              for cliente in dados:
+                  db_clientes.write(";".join(cliente) + "\n")
+        except (IOError, PermissionError) as e:
+            print(f"Erro na persistência dos dados: {e}")
 
     def pode_cadastrar(self, cpf):
         clientes_cadastrados = self.ler_clientes()
         return any(cliente[2] == cpf for cliente in clientes_cadastrados)
-    
+
     #ÚTEIS
     def verificar_preenchimento(self, dado):
         if dado.isspace() or dado == "":
@@ -58,55 +67,68 @@ class ZooBurguerClube:
             return True
         else:
             return False
-        
+
     def tratar_string(self, dado):
         dado_sem_espacos = dado.strip()
         dado_sem_ponto_ou_virgula = dado_sem_espacos.strip(",.")
         dado_tudo_minusculo = dado_sem_ponto_ou_virgula.casefold()
         return dado_tudo_minusculo
 
+    def solicitar_cpf(self):
+        cpf = str(input('Digite seu CPF, apenas números e sem espaços: '))
+        while self.verificar_preenchimento(cpf) :
+            cpf = str(input('CPF inválido ou em branco. Digite seu CPF, apenas números e sem espaços: '))
+        return self.tratar_string(cpf)
+
+    def solicitar_nome(self):
+        nome = str(input('Como prefere ser chamado? '))
+        while self.verificar_preenchimento(nome):
+            nome = str(input('Como prefere ser chamado? '))
+        return self.tratar_string(nome)
+
+    def solicitar_email(self):
+        email = str(input('Digite o seu melhor e-mail: '))
+        while self.verificar_preenchimento(email):
+            email = str(input('Digite o seu melhor e-mail: '))
+        return self.tratar_string(email)
+
+    def solicitar_senha(self):
+        senha = str(input('Digite uma senha: '))
+        while self.verificar_preenchimento(senha):
+            senha = str(input('Digite uma senha: '))
+        return senha
+
     #CREATE
     def cadastrar_cliente(self):
-
-        cpf = str(input('Digite seu CPF, apenas números e sem espaços: '))
-        while self.verificar_preenchimento(cpf):
-            cpf = str(input('Digite seu CPF, apenas números e sem espaços: '))
-        cpf = self.tratar_string(cpf)
+      try:
+        cpf = self.solicitar_cpf()
 
         if self.pode_cadastrar(cpf):
-            print("Você já possui cadastro, tente fazer login!")
-            senha = str(input('Digite sua senha: '))
-            autentica = self.ler_clientes()
-            for verificacao in autentica:
-                if verificacao[2] == cpf and verificacao[4] == senha:
-                    print("Login realizado com sucesso!")
+            print("Você já possui cadastro! Vamos te reecaminharpara o login!")
+            return self.realizar_login()
+
         else:
-            nome = str(input('Como prefere ser chamado? '))
-            while self.verificar_preenchimento(nome):
-                nome = str(input('Como prefere ser chamado? '))
-            nome = self.tratar_string(nome)
-
-            email = str(input('Digite o seu melhor e-mail: '))
-            while self.verificar_preenchimento(email):
-                email = str(input('Digite o seu melhor e-mail: '))
-            email = self.tratar_string(email)
-
-            senha = str(input('Digite uma senha: '))
-            while self.verificar_preenchimento(senha):
-                senha = str(input('Digite uma senha: '))
+            nome = self.solicitar_nome()
+            email = self.solicitar_email()
+            senha = self.solicitar_senha()
 
             id_cliente = str(self.contador_clientes)
             pontos = str(self.pontos_cadastro)
+
             dados = [id_cliente, nome, cpf, email, senha, pontos]
 
             self.inserir_cliente(dados)
+            self.contador_clientes += 1
             print("Cadastrado com Sucesso!")
-        
+            return dados
+      except Exception as e:
+        print(f"Erro ao cadastrar: {e}")
+
     #READ
     def cliente_por_id(self):
         id_atual = str(input('Digite o ID do cliente que deseja analisar: '))
         clientes_cadastrados = self.ler_clientes()
-        
+
         encontrado = False
         for cliente in clientes_cadastrados:
             if cliente[0] == id_atual:
@@ -116,41 +138,31 @@ class ZooBurguerClube:
 
         if not encontrado:
             print(f"Cliente com ID {id_atual} não encontrado.")
-        
+
     #UPDATE
     def atualizar_cliente(self):
         id_atual = str(input('Digite o ID que deseja atualizar: '))
         clientes_cadastrados = self.ler_clientes()
-        
+
         encontrado = False
         for i, cliente in enumerate(clientes_cadastrados):
             if cliente[0] == id_atual:
-                nome = str(input('Como prefere ser chamado? '))
-                while self.verificar_preenchimento(nome):
-                    nome = str(input('Como prefere ser chamado? '))
-                nome = self.tratar_string(nome)
+                nome = self.solicitar_nome()
+                email = self.solicitar_email()
+                senha = self.solicitar_senha()
 
-                email = str(input('Digite o seu melhor e-mail: '))
-                while self.verificar_preenchimento(email):
-                    email = str(input('Digite o seu melhor e-mail: '))
-                email = self.tratar_string(email)
-
-                senha = str(input('Digite uma senha: '))
-                while self.verificar_preenchimento(senha):
-                    senha = str(input('Digite uma senha: '))
-                
                 pontos = cliente[5]
                 dados = [cliente[0], nome, cliente[2], email, senha, pontos]
                 clientes_cadastrados[i] = dados
                 self.persistencia_clientes(clientes_cadastrados)
-                
+
                 encontrado = True
                 print("Dados Atualizados com sucesso!")
                 break
 
         if not encontrado:
             print(f"Cliente com ID {id_atual} não encontrado.")
-   
+
     #DELETE
     def remover_cliente(self):
         id_cliente = str(input('Digite o ID que deseja remover o cadastro: '))
@@ -170,8 +182,8 @@ class ZooBurguerClube:
 
     #LOGIN
     def realizar_login(self):
-        cpf = str(input('Digite seu CPF: '))
-        senha = str(input('Digite sua senha: '))
+        cpf = self.solicitar_cpf()
+        senha = self.solicitar_senha()
 
         autentica = self.ler_clientes()
         for verificacao in autentica:
@@ -180,23 +192,15 @@ class ZooBurguerClube:
                 return verificacao
 
         print("Falha no login. Verifique suas credenciais.")
-        return None
-    
+        return False
+
     #PONTOS
     def exibir_recompensas(self):
         for item, recompensa_pontos in self.recompensas.items():
             print(f"{item}: {recompensa_pontos['recompensa']} - Pontos Necessário: {recompensa_pontos['pontos']:.2f}")
 
-    def calcular_debito_de_pontos(self, saldo_de_pontos, pontos_necessarios):
-        resultado = float(saldo_de_pontos) - float(pontos_necessarios)
-        if resultado >= 0:
-            print(f"\nApós finalizar o pedido, o seu saldo será de {resultado} pontos")
-            return resultado
-        else:
-            print("Você não possui pontos suficientes")
-            return False
-    
     def calcular_credito_de_pontos(self, saldo_de_pontos, total_pedido):
+      try:
         resultado = float(saldo_de_pontos) + float(total_pedido)
         if resultado >= 0:
             print(f"\nApós finalizar o pedido, o seu saldo será de {resultado} pontos")
@@ -204,25 +208,44 @@ class ZooBurguerClube:
         else:
             print("Você não possui pontos suficientes")
             return False
+      except (ValueError, TypeError) as e:
+        print(f"Erro no cálculo de pontos: {e}")
+        return False
 
-    def resgatar_recompensas(self):
-        resgates:{}
+    def calcular_pontos_suficientes(self, pontos_necessarios, saldo_de_pontos):
+      try:
+        resultado = float(saldo_de_pontos) - float(pontos_necessarios)
+        if resultado >= 0:
+            print(f"\nApós finalizar o pedido, o seu saldo será de {resultado} pontos")
+            return resultado
+        else:
+            print("Você não possui pontos suficientes")
+            return False
+      except (ValueError, TypeError) as e:
+        print(f"Erro no cálculo de pontos: {e}")
+        return False
+
+    def resgatar_recompensas(self, id_cliente, saldo_de_pontos):
+        resgates = {}
         while True:
             escolha = str(input("Digite o número do item desejado (ou 'S' para sair): "))
             if escolha.upper() == 'S':
                 break
             if escolha in self.recompensas:
-                resgates[self.recompensas[escolha]['recompensa']] = { 'pontos': self.recompensas[escolha]['pontos']}
+                resgates[self.recompensas[escolha]['recompensa']] = { 'recompensa': self.recompensas[escolha]['recompensa'] , 'pontos': self.recompensas[escolha]['pontos']}
                 #verifica pontos necessários uma função
                 pontos_necessarios =[self.recompensas[escolha]['pontos']]
-                pontos_suficientes = self.calcular_pontos_suficientes(pontos_necessarios) 
-                if pontos_suficientes:
-                    print(pontos_suficientes)
-                    #ainda precisa atualizar no arquivo de texto
+
+                pontos_suficientes = self.calcular_pontos_suficientes(pontos_necessarios[0], saldo_de_pontos)
+
+                if pontos_suficientes >=0:
+                    self.atualizar_pontos(id_cliente, pontos_suficientes)
+                    print("Pronto, sua recompensa foi resgatada!")
+                    return resgates
 
             else:
-                print("Opção inválida. Tente novamente.")
-    
+                print("Opção inválida. Você parece não ter pontos suficientes.")
+
     def atualizar_pontos(self, id_atual, novo_saldo):
         clientes_cadastrados = self.ler_clientes()
         atualizado = False
@@ -233,7 +256,7 @@ class ZooBurguerClube:
               clientes_cadastrados[i] = dados
               self.persistencia_clientes(clientes_cadastrados)
               atualizado = True
-              print("O seu saldo já foi atualizado!")
+              print("O seu saldo de pontos já foi atualizado!")
               break
 
         if not atualizado:
@@ -284,32 +307,40 @@ class ZooBurguerClube:
         else:
           print('Opção inválida!')
 
-
     #MAIN
-  
+
     def main(self):
-        dados_cliente = self.realizar_login()
-        # self.cadastrar_cliente()
-        
+        dados_cliente =self.cadastrar_cliente()
+
+        resgate = {}
+        if float(dados_cliente[5]) > 0:
+           self.exibir_recompensas()
+           resgate = self.resgatar_recompensas(dados_cliente[0], dados_cliente[5])
+
         print("Realize seu pedido:")
 
         pedido = self.fazer_pedido()
         total = self.calcular_total(pedido)
+
         pontos_gerados = self.calcular_credito_de_pontos(dados_cliente[5],total)
-        #pontos_resgatados = self.calcular_debito_de_pontos(saldo_de_pontos, pontos_necessarios)
-        
+
         print("\nResumo do Pedido:")
+        if resgate:
+          for item, recompensa_pontos in resgate.items():
+            print(f"Resgate de recompensas: {recompensa_pontos['recompensa']} - {recompensa_pontos['pontos']} pontos.")
         for item, qtd_preco in pedido.items():
             print(f"{qtd_preco['quantidade']}x {item} - R${qtd_preco['preco']:.2f} cada")
 
         print(f"\nTotal do Pedido: R${total:.2f}")
         self.exibir_metodos_pagamento()
+
         pagamento_aprovado = str(input('aguardando confirmação'))
-  
+
         if pagamento_aprovado:
+          print("Pagamento Aprovado, Seu pedido está sendo preparado!")
           self.atualizar_pontos(dados_cliente[0],pontos_gerados)
         else:
-          print('Error, tente novamente')
+          print('Parece que sua compra não foi aprovada, tente novamente!')
 
 
 sistema_restaurante = ZooBurguerClube()
